@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>간단한 벽돌쌓기 게임</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #2c3e50;
+    color: white;
+    flex-direction: column;
+    margin: 0;
+    font-family: sans-serif;
+  }
+  canvas {
+    background-color: #34495e;
+    border: 2px solid #ecf0f1;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
+</style>
+</head>
+<body>
+
+<h2>벽돌쌓기 게임</h2>
+<canvas id="gameBoard" width="240" height="400"></canvas>
+
+<script>
+  const canvas = document.getElementById('gameBoard');
+  const ctx = canvas.getContext('2d');
+  
+  const ROWS = 20;
+  const COLS = 12;
+  const BLOCK_SIZE = 20;
+  
+  // 게임 보드 배열 초기화
+  let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  
+  // 현재 떨어지는 블록 (간단하게 2x2 정사각형 형태)
+  let piece = { x: 5, y: 0, shape: [[1, 1], [1, 1]] };
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 쌓인 벽돌 그리기
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (board[r][c]) {
+          ctx.fillStyle = '#3498db';
+          ctx.fillRect(c * BLOCK_SIZE, r * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+          ctx.strokeStyle = '#2980b9';
+          ctx.strokeRect(c * BLOCK_SIZE, r * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+      }
+    }
+    
+    // 현재 떨어지는 벽돌 그리기
+    ctx.fillStyle = '#e74c3c';
+    for (let r = 0; r < piece.shape.length; r++) {
+      for (let c = 0; c < piece.shape[r].length; c++) {
+        if (piece.shape[r][c]) {
+          ctx.fillRect((piece.x + c) * BLOCK_SIZE, (piece.y + r) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+          ctx.strokeStyle = '#c0392b';
+          ctx.strokeRect((piece.x + c) * BLOCK_SIZE, (piece.y + r) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+        }
+      }
+    }
+  }
+
+  function collision() {
+    for (let r = 0; r < piece.shape.length; r++) {
+      for (let c = 0; c < piece.shape[r].length; c++) {
+        if (piece.shape[r][c]) {
+          let nx = piece.x + c;
+          let ny = piece.y + r;
+          // 벽에 닿거나 다른 블록과 충돌했는지 확인
+          if (nx < 0 || nx >= COLS || ny >= ROWS || board[ny][nx]) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  function mergeAndClear() {
+    // 보드에 현재 벽돌 고정
+    for (let r = 0; r < piece.shape.length; r++) {
+      for (let c = 0; c < piece.shape[r].length; c++) {
+        if (piece.shape[r][c]) {
+          board[piece.y + r][piece.x + c] = 1;
+        }
+      }
+    }
+    
+    // 꽉 찬 줄 삭제 및 위에 있는 줄 내리기
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (board[r].every(val => val !== 0)) {
+        board.splice(r, 1);
+        board.unshift(Array(COLS).fill(0));
+        r++; // 삭제 후 같은 인덱스 다시 검사
+      }
+    }
+  }
+
+  function moveDown() {
+    piece.y++;
+    if (collision()) {
+      piece.y--;
+      mergeAndClear();
+      // 새 벽돌 생성
+      piece = { x: 5, y: 0, shape: [[1, 1], [1, 1]] };
+      
+      // 게임 오버 체크
+      if (collision()) {
+        alert("게임 오버! 보드가 초기화됩니다.");
+        board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      }
+    }
+    draw();
+  }
+
+  // 키보드 조작 이벤트
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') {
+      piece.x--;
+      if (collision()) piece.x++;
+    } else if (e.key === 'ArrowRight') {
+      piece.x++;
+      if (collision()) piece.x--;
+    } else if (e.key === 'ArrowDown') {
+      moveDown();
+    }
+    draw();
+  });
+
+  // 0.5초마다 블록 낙하
+  setInterval(moveDown, 500);
+  draw();
+</script>
+</body>
+</html>
